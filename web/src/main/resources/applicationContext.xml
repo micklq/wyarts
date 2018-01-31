@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xmlns:context="http://www.springframework.org/schema/context"
+xmlns:tx="http://www.springframework.org/schema/tx" 
+xmlns:cache="http://www.springframework.org/schema/cache"
+xmlns:task="http://www.springframework.org/schema/task" 
+xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+xmlns:aop="http://www.springframework.org/schema/aop"
+xmlns:jee="http://www.springframework.org/schema/jee"
+xsi:schemaLocation="http://www.springframework.org/schema/beans 
+    http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.2.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-3.2.xsd
+	http://www.springframework.org/schema/cache
+	http://www.springframework.org/schema/cache/spring-cache-3.2.xsd
+	http://www.springframework.org/schema/task
+	http://www.springframework.org/schema/task/spring-task-3.2.xsd
+	http://www.springframework.org/schema/data/jpa
+    http://www.springframework.org/schema/data/jpa/spring-jpa.xsd 
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-3.2.xsd
+	http://www.springframework.org/schema/jee
+	http://www.springframework.org/schema/jee/spring-jee.xsd"	default-lazy-init="true">	 
+	<context:property-placeholder location="classpath:/config${configEnv}.properties" ignore-resource-not-found="false" ignore-unresolvable="false" local-override="true" file-encoding="UTF-8"/>
+    <bean id="abstractDataSource" abstract="true" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close"> 
+     <!-- 基本属性driver、user、password   -->  
+     <property name="driverClassName" value="${db-mysql-driver}"/>              
+     <property name="username" value="${db-mysql-user}" />
+     <property name="password" value="${db-mysql-password}" /> 
+    <!--  配置初始化大小、最小、最大-->  
+     <property name="initialSize" value="${db-mysql-initialSize}" />
+     <property name="minIdle" value="${db-mysql-minIdle}" />
+     <property name="maxActive" value="${db-mysql-maxActive}" />   
+     <!-- 配置获取连接等待超时的时间 --> 
+     <property name="maxWait" value="60000"/> 
+     <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 --> 
+     <property name="timeBetweenEvictionRunsMillis" value="60000"/> 
+     <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 --> 
+     <property name="minEvictableIdleTimeMillis" value="300000"/> 
+     <property name="validationQuery" value="SELECT 'x'"/> 
+     <property name="testWhileIdle" value="true"/> 
+     <property name="testOnBorrow" value="false"/> 
+     <property name="testOnReturn" value="false"/>
+     <!-- 打开PSCache，并且指定每个连接上PSCache的大小 --> 
+     <property name="poolPreparedStatements" value="true"/> 
+     <property name="maxPoolPreparedStatementPerConnectionSize" value="20"/> 
+     <!-- 配置监控统计拦截的filters -->     
+     <property name="filters" value="stat"/> 
+     <!--<property name="connectionProperties" value="config.decrypt=true" /> -->
+     </bean>     
+     <bean id="dataSourceMaster" parent="abstractDataSource"> 
+     <property name="url" value="${db-0-url}" />  
+     </bean>
+     <bean id="dataSourceSlaves" parent="abstractDataSource"> 
+     <property name="url" value="${db-1-url}" />  
+     </bean>           
+     
+     <bean id="dataSourceCluster" class="com.arts.org.data.DynamicDataSource">
+		<property name="master" ref="dataSourceMaster" />		
+		<property name="slaves">
+			<list>
+				<ref bean="dataSourceSlaves"/>				
+			</list>			
+		</property>
+	 </bean>   
+	 <bean id="transactionManager" class="com.arts.org.data.DynamicJpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSourceCluster" />
+	</bean>
+	<tx:advice id="txAdviceJpa" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="insert*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+			<tx:method name="delete*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+			<tx:method name="update*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+			<tx:method name="save*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+			<tx:method name="proc*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+			<tx:method name="query*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="select*" read-only="true" />
+			<tx:method name="find*" read-only="true" />
+			<tx:method name="*" read-only="false" />
+		</tx:attributes>
+	</tx:advice>
+	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <property name="dataSource" ref="dataSourceCluster" />
+        <property name="packagesToScan" value="com.arts.org.model.entity" />  
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+				<property name="showSql" value="false" />
+				<property name="generateDdl" value="true" />
+			</bean>
+		</property>
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+				<prop key="hibernate.cache.use_second_level_cache">${hibernate.cache.use_second_level_cache}</prop>
+				<prop key="hibernate.cache.region.factory_class">${hibernate.cache.region.factory_class}</prop>
+				<prop key="hibernate.cache.use_query_cache">${hibernate.cache.use_query_cache}</prop>
+				<prop key="hibernate.jdbc.fetch_size">${hibernate.jdbc.fetch_size}</prop>
+				<prop key="hibernate.jdbc.batch_size">${hibernate.jdbc.batch_size}</prop>
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+				<prop key="hibernate.connection.isolation">3</prop>
+				<prop key="javax.persistence.validation.mode">none</prop>
+				<prop key="hibernate.search.default.directory_provider">org.hibernate.search.store.FSDirectoryProvider
+				</prop>
+				<prop key="hibernate.search.default.indexBase">${java.io.tmpdir}/hibernate.search/index</prop>
+			</props>
+		</property>
+	</bean>
+    <jpa:repositories base-package="com.arts.org.data.repository"
+		entity-manager-factory-ref="entityManagerFactory"
+		transaction-manager-ref="transactionManager"
+		factory-class="com.arts.org.data.repository.BaseRepositoryFactoryBean">
+	</jpa:repositories>
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+	
+	<!-- MyBatis -->
+	<bean id="transactionManagerDAO" class="com.arts.org.data.DynamicDataSourceTransactionManager">	    
+		<property name="dataSource" ref="dataSourceCluster" />
+	</bean>  
+	<tx:advice id="txAdviceDao" transaction-manager="transactionManagerDAO">
+	  <tx:attributes>
+		<tx:method name="insert*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+		<tx:method name="delete*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+		<tx:method name="update*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+		<tx:method name="save*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+		<tx:method name="proc*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+		<tx:method name="query*" propagation="REQUIRED" read-only="false" rollback-for="Exception" />
+		<tx:method name="get*" read-only="true" />
+		<tx:method name="select*" read-only="true" />
+		<tx:method name="find*" read-only="true" />
+		<tx:method name="*" read-only="false" />			
+		</tx:attributes>
+	</tx:advice>   		
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSourceCluster" />
+		<property name="mapperLocations" value="classpath:com/arts/org/data/mapper/*.xml" />	
+		<property name="typeAliasesPackage" value="com.arts.org.model.entity" />		
+	</bean>	
+	<bean  id="mapperScannerConfigurer"  class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.arts.org.data.mapper" />		
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />		
+	</bean>
+	  <!--*********************事务 AOP*********************-->
+	<aop:config>
+	    <!-- JPA切入点 -->
+		<aop:pointcut id="repositoryMethods" expression="execution(* com.arts.org.service.impl..*(..))" />
+		<!-- DAO切入点 -->
+		<aop:pointcut id="daoMethods" expression="execution(* com.arts.org.service.impl..*(..))" /> 
+		<!-- serviceMethods 切入点关联事务通知 -->		
+		<aop:advisor advice-ref="txAdviceJpa" pointcut-ref="repositoryMethods" />		
+		<!-- serviceMethods 切入点关联事务通知 -->
+		<aop:advisor advice-ref="txAdviceDao" pointcut-ref="daoMethods" /> 
+	</aop:config>    
+      
+	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetClass" value="java.lang.System" />
+		<property name="targetMethod" value="setProperty" />
+		<property name="arguments">
+			<list>
+				<value>org.quartz.scheduler.skipUpdateCheck</value>
+				<value>true</value>
+			</list>
+		</property>
+	</bean>		
+	 <cache:annotation-driven cache-manager="cacheManager" />  
+	 <bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+		<property name="configLocation" value="classpath:ehcache.xml" />
+		<property name="shared" value="true" />
+	</bean>
+	<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+		<property name="cacheManager" ref="ehCacheManager" />
+	</bean>   	
+	
+	<bean id="messageSource" class="com.arts.org.webcomn.WildcardResourceBundleMessageSource">
+		<property name="cacheSeconds" value="${message.cache_seconds}" />
+		<property name="defaultEncoding" value="${message.default_encoding}" />
+		<property name="fileEncodings" value="${message.default_encoding}" />
+		<!-- must set be false, otherwise beanvalidation will never replace Annotation Attributes correctly. -->
+		<property name="useCodeAsDefaultMessage" value="false" />
+		<!-- TODO extends ReloadableResourceBundleMessageSource to support * in  filename of basenames property -->
+		<property name="basenames">
+			<list>
+				<value>/WEB-INF/language/message</value>
+				<value>/WEB-INF/language/security/message</value>
+				<value>/WEB-INF/language/message-*</value>
+				<value>/WEB-INF/language/validation-*</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean class="org.springframework.validation.beanvalidation.MethodValidationPostProcessor" />
+	<bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+		<property name="validationMessageSource" ref="messageSource" />
+	</bean>
+
+	<bean id="localeResolver" class="org.springframework.web.servlet.i18n.FixedLocaleResolver">
+		<property name="defaultLocale" value="${locale}" />
+	</bean>
+  	
+	
+</beans>

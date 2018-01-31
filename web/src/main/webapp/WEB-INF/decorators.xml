@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<decorators defaultdir="/main">
+    <!-- Any urls that are excluded will never be decorated by Sitemesh -->
+    <excludes>
+        <pattern>/login.jsp</pattern>
+        <pattern>/404.html</pattern> 
+        <pattern>/404.jsp</pattern> 
+        <pattern>/error.jsp</pattern>       
+        <pattern>/static/*</pattern>
+        <pattern>/lib/*</pattern>
+        <pattern>/ueditor/*</pattern>
+        <pattern>/ueditor/upload/*</pattern>
+        <pattern>/*Ajax</pattern>
+        <pattern>/*ajax</pattern>
+        <pattern>/*Ajax?*</pattern>
+        <pattern>/*ajax?*</pattern>
+        <pattern>/stat*</pattern>
+        <pattern>/*detail*</pattern>
+        <pattern>/*save*</pattern>
+        <pattern>/*create*</pattern>
+        <pattern>/*update*</pattern>
+        <pattern>/*delete*</pattern>
+        <pattern>/*captcha/create*</pattern>
+        <pattern>/*listpage*</pattern>   
+        <pattern>/*login/logout*</pattern>
+        <pattern>/*download*</pattern>        
+    </excludes>
+    <decorator name="main" page="main.jsp">
+        <pattern>/*</pattern>
+    </decorator>   
+</decorators>

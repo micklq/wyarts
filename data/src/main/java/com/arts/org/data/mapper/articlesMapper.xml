@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arts.org.data.mapper.ArticlesDAO">
+    <sql id="page">limit #{pageStart},#{pageSize}</sql>
+    
+    <update id="clearByCategoryId">
+		update articles a set a.category_id=0 where a.category_id=#{categoryId}
+    </update>
+
+
+</mapper>
+

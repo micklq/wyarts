@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arts.org.data.mapper.TestsDAO">
+
+	<select id="findAllByMapper" resultType="com.arts.org.model.entity.Tests">
+		select *  from tests
+	</select> 
+	<select id="queryAllByMapper" resultType="com.arts.org.model.entity.Tests">
+		select *  from tests
+	</select> 	
+	<insert id="insertTests" parameterType="com.arts.org.model.entity.Tests">
+    insert into tests(name, description, create_at, creator_id, data_from, modify_at) values(#{name}, #{description}, #{createDate}, #{creatorId}, #{dataFrom}, #{modifyDate})
+   </insert>
+</mapper>
